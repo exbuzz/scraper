@@ -10,6 +10,7 @@ namespace Scraper
     {
         static void Main(string[] args)
         {
+            //test
         }
     }
 }
