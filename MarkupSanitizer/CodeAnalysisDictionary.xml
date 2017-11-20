@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- see %ProgramFiles%\Microsoft Visual Studio 9.0\Team Tools\Static Analysis Tools\FxCop\CustomDictionary.xml for samples -->
+<Dictionary>
+	<Words>
+		<Recognized>
+			<Word>tatham</Word>
+			<Word>oddie</Word>
+			<Word>doctype</Word>
+		</Recognized>
+	</Words>
+</Dictionary>
