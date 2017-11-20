@@ -19,7 +19,7 @@ namespace MarkupSanitizer
 
         public void ProcessOutput(MarkupWriter writer)
         {
-            var encodedText = AntiXss.HtmlEncode(UnescapedText);
+            var encodedText = Encoder.HtmlEncode(UnescapedText);
             var cleanedText = NoiseRegex.Replace(encodedText, string.Empty);
             writer.Append(cleanedText);
         }

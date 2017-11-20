@@ -48,5 +48,11 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MarkupSanitizer\MarkupSanitizer.csproj">
+      <Project>{134bdfa7-0345-45e5-8874-c1242ef8cf39}</Project>
+      <Name>MarkupSanitizer</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

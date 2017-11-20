@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
+using MarkupSanitizer;
 
 namespace Scraper
 {
@@ -20,10 +21,16 @@ namespace Scraper
 
             string html = getHtml(word);
 
+            SanitizedMarkup markup = Sanitizer.SanitizeMarkup(html);
 
-
-            //test
-
+            //XmlReaderSettings settings = new XmlReaderSettings();
+            //settings.DtdProcessing = DtdProcessing.Ignore;
+            //using (XmlReader reader = XmlReader.Create(dataStream, settings))
+            //{
+            //    reader.MoveToContent();
+            //    reader.ReadToDescendant("table");
+            //    string x = reader.ReadElementContentAsString();
+            //}
         }
 
         static string getHtml(string word)
@@ -35,24 +42,16 @@ namespace Scraper
 
        
             Stream dataStream = response.GetResponseStream();
-            //StreamReader reader = new StreamReader(dataStream);
-            XmlReaderSettings settings = new XmlReaderSettings();
-            settings.DtdProcessing = DtdProcessing.Ignore;
-            using (XmlReader reader = XmlReader.Create(dataStream, settings))
-            {
-                reader.MoveToContent();
-                reader.ReadToDescendant("table");
-                string x = reader.ReadElementContentAsString();
-            }
-            //string responseFromServer = reader.ReadToEnd();
+            StreamReader reader = new StreamReader(dataStream);
+
+            string responseFromServer = reader.ReadToEnd();
 
 
 
-            //reader.Close();
+            reader.Close();
             dataStream.Close();
             response.Close();
-            //return responseFromServer;
-            return "";
+            return responseFromServer;
         }
     }
 }

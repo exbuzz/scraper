@@ -91,7 +91,7 @@ namespace MarkupSanitizer
             }
 
             var formatted = from a in attributes
-                            select string.Format(AttributeFormat, a.Key, AntiXss.XmlAttributeEncode(a.Value));
+                            select string.Format(AttributeFormat, a.Key, Microsoft.Security.Application.Encoder.XmlAttributeEncode(a.Value));
 
             // The leading space is included on each attribute, not as a separator, so that a
             // leading space is returned from this method whenever there are attributes present
