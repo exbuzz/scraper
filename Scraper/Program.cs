@@ -9,12 +9,14 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using MarkupSanitizer;
+using System.Web.Script.Serialization;
 
 namespace Scraper
 {
     class Program
     {
         public static string BaseUrl = "https://www.italian-verbs.com/italian-verbs/conjugation.php";
+        public static string GoogleTranslateUrl = "https://translation.googleapis.com/language/translate/v2?key=AIzaSyABjcSkcaGLlIT1iEG2KMO8p58rLpAzonk";
 
         public static string[] Moods = {
                 "INDICATIVO",
@@ -46,7 +48,7 @@ namespace Scraper
 
             string html = getHtml(word);
 
-            html = removeElement("<script.*?>.*?</script>",html);
+            html = removeElement("<script.*?>.*?</script>", html);
             html = removeElement("<head.*?>.*?</head>", html);
             html = removeElement("<img.*?>", html);
             html = removeElement("<br.*?>", html);
@@ -65,16 +67,16 @@ namespace Scraper
             html = html.Replace("&nbsp;", string.Empty);
 
 
-            html = Regex.Replace(html, @"<([^/]*?)\s+[^/>]+>", "<$1>",RegexOptions.Singleline);
+            html = Regex.Replace(html, @"<([^/]*?)\s+[^/>]+>", "<$1>", RegexOptions.Singleline);
             html = Regex.Replace(html, @"<!.*?>", string.Empty, RegexOptions.Singleline);
 
             SanitizedMarkup markup = Sanitizer.SanitizeMarkup(html);
             html = markup.MarkupText;
 
-            html = html.Replace("--&gt;",string.Empty);
+            html = html.Replace("--&gt;", string.Empty);
             html = html.Replace("&gt;", string.Empty);
 
-            html = Regex.Replace(html, @"\&\#[0-9]+\;", string.Empty,RegexOptions.Singleline);
+            html = Regex.Replace(html, @"\&\#[0-9]+\;", string.Empty, RegexOptions.Singleline);
 
             html = Regex.Replace(html, @"<td>\s*</td>", string.Empty, RegexOptions.Singleline);
             html = Regex.Replace(html, @"<tr>\s*</tr>", string.Empty, RegexOptions.Singleline);
@@ -82,7 +84,7 @@ namespace Scraper
             html = Regex.Replace(html, @"<li>\s*</li>", string.Empty, RegexOptions.Singleline);
             html = Regex.Replace(html, @"<ul>\s*</ul>", string.Empty, RegexOptions.Singleline);
 
-            html = html.Replace("<span>", String.Empty).Replace("</span>",string.Empty);
+            html = html.Replace("<span>", String.Empty).Replace("</span>", string.Empty);
             html = html.Replace("<strong>", String.Empty).Replace("</strong>", string.Empty);
             html = html.Replace("<h3>", String.Empty).Replace("</h3>", string.Empty);
             html = html.Replace("<p>", String.Empty).Replace("</p>", string.Empty);
@@ -98,8 +100,8 @@ namespace Scraper
 
             XmlReaderSettings settings = new XmlReaderSettings();
             settings.DtdProcessing = DtdProcessing.Ignore;
-            string currentMode=string.Empty;
-            string currentTense=string.Empty;
+            string currentMode = string.Empty;
+            string currentTense = string.Empty;
             string currentPronoun = string.Empty;
 
             //List<Tuple<string, string, string, string>> tuples = new List<Tuple<string, string, string, string>>();
@@ -109,24 +111,29 @@ namespace Scraper
             List<string> lines = new List<string>();
             using (XmlReader reader = XmlReader.Create(ms, settings))
             {
-                while(reader.Read())
+                while (reader.Read())
                 {
-                    if(reader.NodeType==XmlNodeType.Element && reader.Name=="td")
+                    if (reader.NodeType == XmlNodeType.Element && reader.Name == "td")
                     {
                         string currentCell = reader.ReadElementContentAsString();
                         currentCell = currentCell.Trim();
+                        currentCell = currentCell.ToLower();
 
-                        if(Moods.Contains(currentCell,StringComparer.InvariantCultureIgnoreCase))
+                        if (Moods.Contains(currentCell, StringComparer.InvariantCultureIgnoreCase))
                         {
                             currentMode = currentCell;
                             currentTense = string.Empty;
                             currentPronoun = string.Empty;
+                            Console.WriteLine("#####################");
+                            Console.WriteLine($"Starting mood '{currentMode}'...");
                             continue;
                         }
                         if (Tenses.Contains(currentCell, StringComparer.InvariantCultureIgnoreCase))
                         {
                             currentTense = currentCell;
                             currentPronoun = string.Empty;
+                            Console.WriteLine("---------------------");
+                            Console.WriteLine($"Starting tense '{currentTense}'...");
                             continue;
                         }
 
@@ -136,7 +143,7 @@ namespace Scraper
                             currentPronoun = pronounMatch.Value;
                         }
 
-                        if(currentMode.Equals("IMPERATIVO",StringComparison.InvariantCultureIgnoreCase))
+                        if (currentMode.Equals("IMPERATIVO", StringComparison.InvariantCultureIgnoreCase))
                         {
                             counter++;
                             if (counter == 1) currentPronoun = "tu";
@@ -149,7 +156,7 @@ namespace Scraper
                                 counter = 0;
                             }
                         }
-                        if(currentCell.Contains(":"))
+                        if (currentCell.Contains(":"))
                         {
                             string[] parts = currentCell.Split(':');
                             currentTense = parts[0];
@@ -158,20 +165,31 @@ namespace Scraper
 
                         currentCell = currentCell.Trim();
 
-                        lines.Add($"{word},{currentMode},{currentTense},{currentPronoun},{currentCell}");
+                        string translateText = currentCell;
+                        string english = string.Empty;
+                        if (currentPronoun == "lui/lei")
+                        {
+                            translateText = translateText.Replace("lei", string.Empty);
+                            translateText = translateText.Replace("/", string.Empty);
+                        }
+                        english = getEnglish(translateText);
+
+                        lines.Add($"{word},{currentMode},{currentTense},{currentPronoun},{currentCell},{english}");
                     }
                 }
             }
 
+            Console.WriteLine("Finished all forms.");
+
             lines.RemoveAt(0);
             lines.RemoveAt(0);
 
             lines.RemoveAt(lines.Count - 1);
             lines.RemoveAt(lines.Count - 1);
 
-            string file =Path.Combine(Environment.CurrentDirectory, word + ".txt");
+            string file = Path.Combine(Environment.CurrentDirectory, word + ".txt");
             StreamWriter fileWriter = File.CreateText(file);
-            foreach(string line in lines)
+            foreach (string line in lines)
             {
                 fileWriter.WriteLine(line);
             }
@@ -182,16 +200,16 @@ namespace Scraper
         static string removeElement(string pattern, string html)
         {
             Regex regex = new Regex(pattern, RegexOptions.Singleline);
-            return  regex.Replace(html, string.Empty);
+            return regex.Replace(html, string.Empty);
         }
         static string getHtml(string word)
         {
-            
+
             WebRequest request = WebRequest.Create($"{BaseUrl}?parola={word}");
             request.Credentials = CredentialCache.DefaultCredentials;
             HttpWebResponse response = (HttpWebResponse)request.GetResponse();
 
-       
+
             Stream dataStream = response.GetResponseStream();
             StreamReader reader = new StreamReader(dataStream);
 
@@ -204,5 +222,61 @@ namespace Scraper
             response.Close();
             return responseFromServer;
         }
+
+        static string getEnglish(string word)
+        {
+            Console.Write($"Translating '{word}'...");
+            WebRequest request = WebRequest.Create($"{GoogleTranslateUrl}");
+            request.Method = "POST";
+            request.ContentType = "application/json";
+
+            StreamWriter bodyWriter = new StreamWriter(request.GetRequestStream());
+            var requestObject = new
+            {
+                q = new string[] { word },
+                source = "it",
+                target = "en"
+            };
+            string requestString = new JavaScriptSerializer().Serialize(requestObject);
+            bodyWriter.Write(requestString);
+            bodyWriter.Flush();
+
+            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+
+            Stream dataStream = response.GetResponseStream();
+            StreamReader reader = new StreamReader(dataStream);
+
+            string responseFromServer = reader.ReadToEnd();
+
+
+            reader.Close();
+            dataStream.Close();
+            response.Close();
+
+            var responseObject = new JavaScriptSerializer().Deserialize<TranslationRoot>(responseFromServer);
+
+            string ret = responseObject?.data?.translations?[0].translatedText;
+
+            Console.WriteLine($"'{ret}'.");
+
+            return ret;
+        }
     }
+
+
+    public class TranslationRoot
+    {
+        public Data data { get; set; }
+    }
+
+    public class Data
+    {
+        public Translation[] translations { get; set; }
+    }
+
+    public class Translation
+    {
+        public string translatedText { get; set; }
+    }
+
 }
