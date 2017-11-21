@@ -15,16 +15,36 @@ namespace Scraper
     class Program
     {
         public static string BaseUrl = "https://www.italian-verbs.com/italian-verbs/conjugation.php";
+
+        public static string[] Moods = {
+                "INDICATIVO",
+                "CONGIUNTIVO",
+                "CONDIZIONALE",
+                "IMPERATIVO",
+                "INFINITO",
+                "PARTICIPIO",
+                "GERUNDIO"
+        };
+
+
+        public static string[] Tenses = {
+            "PRESENTE",
+            "IMPERFETTO",
+            "PASSATO REMOTO",
+            "FUTURO SEMPLICE",
+            "PASSATO PROSSIMO",
+            "TRAPASSATO PROSSIMO",
+            "TRAPASSATO REMOTO",
+            "FUTURO ANTERIORE",
+            "PASSATO",
+            "TRAPASSATO"
+        };
+
         static void Main(string[] args)
         {
-            string word = "avere";
+            string word = "portare";
 
             string html = getHtml(word);
-
-            //SanitizedMarkup markup = Sanitizer.SanitizeMarkup(html);
-            //html = markup.MarkupText;
-
-
 
             html = removeElement("<script.*?>.*?</script>",html);
             html = removeElement("<head.*?>.*?</head>", html);
@@ -75,26 +95,88 @@ namespace Scraper
             sw.Write(html);
             sw.Flush();
             ms.Position = 0;
-            //StreamReader sr = new StreamReader(ms);
-            //string html2 = sr.ReadToEnd();
-
-            //XmlDocument xmlDocument = new XmlDocument();
-            //xmlDocument.LoadXml(html);
 
             XmlReaderSettings settings = new XmlReaderSettings();
             settings.DtdProcessing = DtdProcessing.Ignore;
-            StringBuilder sb = new StringBuilder();
+            string currentMode=string.Empty;
+            string currentTense=string.Empty;
+            string currentPronoun = string.Empty;
+
+            //List<Tuple<string, string, string, string>> tuples = new List<Tuple<string, string, string, string>>();
+
+            int counter = 0;
+
+            List<string> lines = new List<string>();
             using (XmlReader reader = XmlReader.Create(ms, settings))
             {
                 while(reader.Read())
                 {
                     if(reader.NodeType==XmlNodeType.Element && reader.Name=="td")
                     {
-                        string x = reader.ReadElementContentAsString();
-                        sb.Append(x);
+                        string currentCell = reader.ReadElementContentAsString();
+                        currentCell = currentCell.Trim();
+
+                        if(Moods.Contains(currentCell,StringComparer.InvariantCultureIgnoreCase))
+                        {
+                            currentMode = currentCell;
+                            currentTense = string.Empty;
+                            currentPronoun = string.Empty;
+                            continue;
+                        }
+                        if (Tenses.Contains(currentCell, StringComparer.InvariantCultureIgnoreCase))
+                        {
+                            currentTense = currentCell;
+                            currentPronoun = string.Empty;
+                            continue;
+                        }
+
+                        Match pronounMatch = Regex.Match(currentCell, "(io|tu|lui/lei|noi|voi|loro)");
+                        if (pronounMatch.Success)
+                        {
+                            currentPronoun = pronounMatch.Value;
+                        }
+
+                        if(currentMode.Equals("IMPERATIVO",StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            counter++;
+                            if (counter == 1) currentPronoun = "tu";
+                            if (counter == 2) currentPronoun = "lui/lei";
+                            if (counter == 3) currentPronoun = "noi";
+                            if (counter == 4) currentPronoun = "voi";
+                            if (counter == 5)
+                            {
+                                currentPronoun = "loro";
+                                counter = 0;
+                            }
+                        }
+                        if(currentCell.Contains(":"))
+                        {
+                            string[] parts = currentCell.Split(':');
+                            currentTense = parts[0];
+                            currentCell = parts[1];
+                        }
+
+                        currentCell = currentCell.Trim();
+
+                        lines.Add($"{word},{currentMode},{currentTense},{currentPronoun},{currentCell}");
                     }
                 }
             }
+
+            lines.RemoveAt(0);
+            lines.RemoveAt(0);
+
+            lines.RemoveAt(lines.Count - 1);
+            lines.RemoveAt(lines.Count - 1);
+
+            string file =Path.Combine(Environment.CurrentDirectory, word + ".txt");
+            StreamWriter fileWriter = File.CreateText(file);
+            foreach(string line in lines)
+            {
+                fileWriter.WriteLine(line);
+            }
+            fileWriter.Flush();
+            fileWriter.Close();
         }
 
         static string removeElement(string pattern, string html)
