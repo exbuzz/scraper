@@ -146,6 +146,10 @@ namespace Scraper
                             currentTense = parts[0]?.Trim();
                             currentCell = parts[1]?.Trim();
                         }
+                        if (currentCell.Contains("(") && currentCell.Contains(")"))
+                        {
+                            currentCell = Regex.Replace(currentCell, @"\([^\)]*\)", string.Empty);
+                        }
 
 
                         string english = getEnglish(currentCell);
