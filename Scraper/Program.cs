@@ -150,7 +150,7 @@ namespace Scraper
 
                         string english = getEnglish(currentCell);
 
-                        lines.Add($"{infinitive},{englishInfinitive},{currentMode},{currentTense},{currentPronoun},{currentCell},{english}");
+                        lines.Add($"{infinitive};{englishInfinitive};{currentMode};{currentTense};{currentPronoun};{currentCell};{english}");
                     }
                 }
             }
